@@ -47,7 +47,7 @@ const systemPrompt = `You are an architecture diagram assistant.
 Convert the user's description into a Mermaid flowchart diagram.
 
 STRICT MERMAID SYNTAX RULES:
-- First line must be: graph LR
+- First line must be: graph TD
 - Every node MUST have an ID followed by a shape, e.g.: User([User])  NOT [User]
 - Node formats:
     ServiceName[Label]       for services/components
@@ -98,9 +98,10 @@ func callGroq(userText string) (string, error) {
 }
 
 var (
-	codeFenceRe  = regexp.MustCompile("(?i)```(?:mermaid)?\\s*([\\s\\S]*?)```")
+	codeFenceRe     = regexp.MustCompile("(?i)```(?:mermaid)?\\s*([\\s\\S]*?)```")
 	trailingArrowRe = regexp.MustCompile(`\|>(\s)`)
-	bareNodeRe   = regexp.MustCompile(`(-->|<--|---|\s)\[([^\]]+)\]`)
+	bareNodeRe      = regexp.MustCompile(`(-->|<--|---|\s)\[([^\]]+)\]`)
+	graphDirRe      = regexp.MustCompile(`(?i)^(graph|flowchart)\s+(LR|RL|BT)`)
 )
 
 func cleanMermaid(raw string) string {
@@ -109,6 +110,9 @@ func cleanMermaid(raw string) string {
 		raw = m[1]
 	}
 	raw = strings.TrimSpace(raw)
+
+	// Force vertical layout: replace graph LR/RL/BT → graph TD
+	raw = graphDirRe.ReplaceAllString(raw, "$1 TD")
 
 	// Fix -->|label|> NodeID  →  -->|label| NodeID
 	raw = trailingArrowRe.ReplaceAllString(raw, `|$1`)
