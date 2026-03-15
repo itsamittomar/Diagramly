@@ -26,14 +26,15 @@ var (
 )
 
 const (
-	qdrantCollection = "diagramly_docs"
-	ollamaURL        = "http://localhost:11434"
-	embedModel       = "nomic-embed-text"
-	embedDim         = 768
-	chunkWords       = 100
-	chunkOverlap     = 10
-	topKChunks       = 5
+	chunkWords   = 100
+	chunkOverlap = 10
+	topKChunks   = 5
 )
+
+// qdrantCollection is per-provider so switching embedders doesn't break existing vectors.
+func qdrantCollection() string {
+	return "diagramly_" + activeEmbedder.ProviderName()
+}
 
 // ── In-memory document metadata ──────────────────────────────────────────────
 
@@ -105,34 +106,6 @@ func chunkText(text string) []string {
 	return chunks
 }
 
-// ── Ollama embeddings ─────────────────────────────────────────────────────────
-
-type ollamaEmbedReq struct {
-	Model  string `json:"model"`
-	Prompt string `json:"prompt"`
-}
-
-type ollamaEmbedResp struct {
-	Embedding []float64 `json:"embedding"`
-}
-
-func embed(text string) ([]float64, error) {
-	body, _ := json.Marshal(ollamaEmbedReq{Model: embedModel, Prompt: text})
-	resp, err := http.Post(ollamaURL+"/api/embeddings", "application/json", bytes.NewReader(body))
-	if err != nil {
-		return nil, fmt.Errorf("ollama unreachable: %w", err)
-	}
-	defer resp.Body.Close()
-	var result ollamaEmbedResp
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, err
-	}
-	if len(result.Embedding) == 0 {
-		return nil, fmt.Errorf("ollama returned empty embedding — is %s pulled?", embedModel)
-	}
-	return result.Embedding, nil
-}
-
 // ── Qdrant Cloud REST client ──────────────────────────────────────────────────
 
 func qdrantDo(method, path string, payload any) ([]byte, int, error) {
@@ -159,22 +132,22 @@ func qdrantDo(method, path string, payload any) ([]byte, int, error) {
 
 // EnsureCollection creates the Qdrant collection if it doesn't exist.
 func EnsureCollection() error {
-	_, status, err := qdrantDo("GET", "/collections/"+qdrantCollection, nil)
+	_, status, err := qdrantDo("GET", "/collections/"+qdrantCollection(), nil)
 	if err != nil {
 		return err
 	}
 	if status == 200 {
-		log.Printf("Qdrant: collection %q already exists", qdrantCollection)
+		log.Printf("Qdrant: collection %q already exists", qdrantCollection())
 		// Ensure index exists even on existing collection (idempotent)
 		qdrantDo("PUT",
-			"/collections/"+qdrantCollection+"/index",
+			"/collections/"+qdrantCollection()+"/index",
 			map[string]any{"field_name": "doc_id", "field_schema": "keyword"},
 		)
 		return nil
 	}
-	_, status, err = qdrantDo("PUT", "/collections/"+qdrantCollection, map[string]any{
+	_, status, err = qdrantDo("PUT", "/collections/"+qdrantCollection(), map[string]any{
 		"vectors": map[string]any{
-			"size":     embedDim,
+			"size":     activeEmbedder.Dim(),
 			"distance": "Cosine",
 		},
 	})
@@ -184,11 +157,11 @@ func EnsureCollection() error {
 	if status != 200 {
 		return fmt.Errorf("failed to create collection, status %d", status)
 	}
-	log.Printf("Qdrant: created collection %q", qdrantCollection)
+	log.Printf("Qdrant: created collection %q", qdrantCollection())
 
 	// Create payload index on doc_id so filters work
 	_, status, err = qdrantDo("PUT",
-		"/collections/"+qdrantCollection+"/index",
+		"/collections/"+qdrantCollection()+"/index",
 		map[string]any{"field_name": "doc_id", "field_schema": "keyword"},
 	)
 	if err != nil {
@@ -209,7 +182,7 @@ type qdrantPoint struct {
 
 func upsertPoints(points []qdrantPoint) error {
 	_, status, err := qdrantDo("PUT",
-		"/collections/"+qdrantCollection+"/points",
+		"/collections/"+qdrantCollection()+"/points",
 		map[string]any{"points": points},
 	)
 	if err != nil {
@@ -240,7 +213,7 @@ func searchChunks(queryVec []float64, docID string) ([]string, error) {
 		"with_payload": true,
 	}
 	raw, status, err := qdrantDo("POST",
-		"/collections/"+qdrantCollection+"/points/search", body)
+		"/collections/"+qdrantCollection()+"/points/search", body)
 	if err != nil {
 		return nil, err
 	}
@@ -330,7 +303,7 @@ func handleRAGUpload(w http.ResponseWriter, r *http.Request) {
 	log.Printf("RAG upload: embedding %d chunks for %q…", len(chunks), header.Filename)
 	points := make([]qdrantPoint, 0, len(chunks))
 	for i, chunk := range chunks {
-		vec, err := embed(chunk)
+		vec, err := activeEmbedder.EmbedDocument(chunk)
 		if err != nil {
 			http.Error(w, "embedding failed: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -426,7 +399,7 @@ func handleRAGQuery(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Embed the question
-	queryVec, err := embed(req.Question)
+	queryVec, err := activeEmbedder.EmbedQuery(req.Question)
 	if err != nil {
 		http.Error(w, "embedding failed: "+err.Error(), http.StatusInternalServerError)
 		return

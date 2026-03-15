@@ -172,6 +172,26 @@ func main() {
 		log.Fatal("QDRANT_URL and QDRANT_API_KEY environment variables not set")
 	}
 
+	// Select embedding provider via EMBED_PROVIDER env var.
+	// Supported: "ollama" (default), "cohere", "openai"
+	switch os.Getenv("EMBED_PROVIDER") {
+	case "cohere":
+		key := os.Getenv("COHERE_API_KEY")
+		if key == "" {
+			log.Fatal("COHERE_API_KEY not set")
+		}
+		activeEmbedder = &CohereEmbedder{APIKey: key, Model: "embed-english-v3.0"}
+	case "openai":
+		key := os.Getenv("OPENAI_API_KEY")
+		if key == "" {
+			log.Fatal("OPENAI_API_KEY not set")
+		}
+		activeEmbedder = &OpenAIEmbedder{APIKey: key, Model: "text-embedding-3-small"}
+	default:
+		activeEmbedder = &OllamaEmbedder{URL: "http://localhost:11434", Model: "nomic-embed-text"}
+	}
+	log.Printf("Embedding provider: %s (dim=%d)", activeEmbedder.ProviderName(), activeEmbedder.Dim())
+
 	if err := EnsureCollection(); err != nil {
 		log.Fatalf("Qdrant init failed: %v", err)
 	}
