@@ -61,11 +61,12 @@ STRICT MERMAID SYNTAX RULES:
         Webhook -->|stores| DB[(Database)]
 - Return ONLY valid Mermaid syntax. No explanation, no markdown, no code fences.`
 
-func callGroq(userText string) (string, error) {
+// callGroq sends a message to Groq with the given system prompt and returns the raw text response.
+func callGroq(sysPrompt, userText string) (string, error) {
 	body, _ := json.Marshal(groqRequest{
 		Model: "llama-3.3-70b-versatile",
 		Messages: []groqMessage{
-			{Role: "system", Content: systemPrompt},
+			{Role: "system", Content: sysPrompt},
 			{Role: "user", Content: userText},
 		},
 	})
@@ -91,10 +92,7 @@ func callGroq(userText string) (string, error) {
 	if len(groqResp.Choices) == 0 {
 		return "", fmt.Errorf("no response from groq")
 	}
-	cleaned := cleanMermaid(groqResp.Choices[0].Message.Content)
-	log.Printf("RAW response:\n%s", groqResp.Choices[0].Message.Content)
-	log.Printf("CLEANED mermaid:\n%s", cleaned)
-	return cleaned, nil
+	return groqResp.Choices[0].Message.Content, nil
 }
 
 var (
@@ -151,14 +149,15 @@ func handleDiagram(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 
-	mermaid, err := callGroq(req.Text)
+	raw, err := callGroq(systemPrompt, req.Text)
 	if err != nil {
 		log.Printf("Groq API error: %v", err)
 		json.NewEncoder(w).Encode(DiagramResponse{Error: "failed to generate diagram"})
 		return
 	}
 
-	json.NewEncoder(w).Encode(DiagramResponse{Mermaid: mermaid})
+	log.Printf("CLEANED mermaid:\n%s", cleanMermaid(raw))
+	json.NewEncoder(w).Encode(DiagramResponse{Mermaid: cleanMermaid(raw)})
 }
 
 func main() {
@@ -167,8 +166,21 @@ func main() {
 		log.Fatal("GROQ_API_KEY environment variable not set")
 	}
 
+	qdrantURL = os.Getenv("QDRANT_URL")
+	qdrantAPIKey = os.Getenv("QDRANT_API_KEY")
+	if qdrantURL == "" || qdrantAPIKey == "" {
+		log.Fatal("QDRANT_URL and QDRANT_API_KEY environment variables not set")
+	}
+
+	if err := EnsureCollection(); err != nil {
+		log.Fatalf("Qdrant init failed: %v", err)
+	}
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/diagram", handleDiagram)
+	mux.HandleFunc("/api/rag/upload", handleRAGUpload)
+	mux.HandleFunc("/api/rag/docs", handleRAGListDocs)
+	mux.HandleFunc("/api/rag/query", handleRAGQuery)
 	mux.Handle("/", http.FileServer(http.Dir("./frontend/dist")))
 
 	handler := corsMiddleware(mux)
@@ -179,6 +191,7 @@ func main() {
 
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s %s", r.Method, r.URL.Path)
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
