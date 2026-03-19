@@ -6,6 +6,8 @@ import "./App.css";
 
 mermaid.initialize({ startOnLoad: false, theme: "neutral" });
 
+const API_BASE = import.meta.env.VITE_API_URL ?? "";
+
 type Mode = "arch" | "schema" | "rag";
 
 function useDebounce<T>(value: T, delay: number): T {
@@ -44,12 +46,60 @@ export default function App() {
     setZoom(1);
   };
 
+  const exportDiagram = (format: "png" | "svg") => {
+    if (!diagramRef.current) return;
+    const svgEl = diagramRef.current.querySelector("svg");
+    if (!svgEl) return;
+
+    const w = svgEl.viewBox.baseVal.width || svgEl.clientWidth || 800;
+    const h = svgEl.viewBox.baseVal.height || svgEl.clientHeight || 600;
+
+    if (format === "svg") {
+      const clone = svgEl.cloneNode(true) as SVGElement;
+      clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      const blob = new Blob([new XMLSerializer().serializeToString(clone)], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.download = "diagram.svg";
+      a.href = url;
+      a.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
+
+    const scale = 2;
+    const canvas = document.createElement("canvas");
+    canvas.width = w * scale;
+    canvas.height = h * scale;
+    const ctx = canvas.getContext("2d")!;
+    ctx.scale(scale, scale);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, w, h);
+
+    const clone = svgEl.cloneNode(true) as SVGElement;
+    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    clone.setAttribute("width", String(w));
+    clone.setAttribute("height", String(h));
+    const blob = new Blob([new XMLSerializer().serializeToString(clone)], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+      const a = document.createElement("a");
+      a.download = "diagram.png";
+      a.href = canvas.toDataURL("image/png");
+      a.click();
+    };
+    img.src = url;
+  };
+
   const generateDiagram = useCallback(async (input: string) => {
     if (!input.trim()) { setMermaidCode(""); return; }
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("http://localhost:8080/api/diagram", {
+      const res = await fetch(`${API_BASE}/api/diagram`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: input }),
@@ -175,15 +225,35 @@ export default function App() {
           <div className="panel-label">
             <span>Live Preview</span>
             {mermaidCode && (
-              <div className="zoom-controls">
-                <button onClick={() => changeZoom(-0.1)} title="Zoom out">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14"/></svg>
-                </button>
-                <span className="zoom-level">{Math.round(zoom * 100)}%</span>
-                <button onClick={() => changeZoom(0.1)} title="Zoom in">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
-                </button>
-                <button className="zoom-reset" onClick={() => setZoom(1)}>Reset</button>
+              <div className="diagram-panel-actions">
+                <div className="zoom-controls">
+                  <button onClick={() => changeZoom(-0.1)} title="Zoom out">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14"/></svg>
+                  </button>
+                  <span className="zoom-level">{Math.round(zoom * 100)}%</span>
+                  <button onClick={() => changeZoom(0.1)} title="Zoom in">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                  </button>
+                  <button className="zoom-reset" onClick={() => setZoom(1)}>Reset</button>
+                </div>
+                <div className="export-controls">
+                  <button className="export-btn" onClick={() => exportDiagram("png")} title="Export as PNG">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                      <polyline points="7 10 12 15 17 10"/>
+                      <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    PNG
+                  </button>
+                  <button className="export-btn" onClick={() => exportDiagram("svg")} title="Export as SVG">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                      <polyline points="7 10 12 15 17 10"/>
+                      <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    SVG
+                  </button>
+                </div>
               </div>
             )}
           </div>

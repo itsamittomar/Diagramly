@@ -13,7 +13,7 @@ interface Message {
   text: string;
 }
 
-const API = "http://localhost:8080";
+const API = import.meta.env.VITE_API_URL ?? "";
 
 function formatSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
