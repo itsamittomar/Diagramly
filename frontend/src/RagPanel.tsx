@@ -34,7 +34,7 @@ export default function RagPanel() {
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch(`${API}/api/rag/docs`)
+    fetch(`${API}/api/rag/docs`, { credentials: "include" })
       .then((r) => r.json())
       .then((data) => setDocs(Array.isArray(data) ? data : []))
       .catch(() => {});
@@ -55,7 +55,7 @@ export default function RagPanel() {
     try {
       const form = new FormData();
       form.append("file", file);
-      const res = await fetch(`${API}/api/rag/upload`, { method: "POST", body: form });
+      const res = await fetch(`${API}/api/rag/upload`, { method: "POST", body: form, credentials: "include" });
       if (!res.ok) {
         const msg = await res.text();
         setUploadError(msg || "Upload failed");
@@ -102,6 +102,7 @@ export default function RagPanel() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ docId: selectedDoc.id, question: q }),
+        credentials: "include",
       });
       const data = await res.json();
       setMessages((prev) => [

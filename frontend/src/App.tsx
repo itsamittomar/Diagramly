@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import mermaid from "mermaid";
 import SchemaPanel from "./SchemaPanel";
 import RagPanel from "./RagPanel";
+import Login from "./Login";
 import "./App.css";
 
 mermaid.initialize({ startOnLoad: false, theme: "neutral" });
@@ -9,6 +10,12 @@ mermaid.initialize({ startOnLoad: false, theme: "neutral" });
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
 type Mode = "arch" | "schema" | "rag";
+
+interface User {
+  email: string;
+  name: string;
+  picture: string;
+}
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -20,6 +27,7 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 export default function App() {
+  const [user, setUser] = useState<User | null | undefined>(undefined);
   const [mode, setMode] = useState<Mode>("arch");
   const [text, setText] = useState("");
   const [mermaidCode, setMermaidCode] = useState("");
@@ -28,6 +36,13 @@ export default function App() {
   const [zoom, setZoom] = useState(1);
   const diagramRef = useRef<HTMLDivElement>(null);
   const debouncedText = useDebounce(text, 800);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/auth/me`, { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => setUser(data))
+      .catch(() => setUser(null));
+  }, []);
 
   const changeZoom = (delta: number) =>
     setZoom((z) => Math.min(3, Math.max(0.25, +(z + delta).toFixed(2))));
@@ -103,6 +118,7 @@ export default function App() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: input }),
+        credentials: "include",
       });
       const data = await res.json();
       if (data.error) setError(data.error);
@@ -136,6 +152,21 @@ export default function App() {
         setError("Mermaid render failed. Check console for raw syntax.");
       });
   }, [mermaidCode]);
+
+  if (user === undefined) {
+    return (
+      <div className="app" style={{ alignItems: "center", justifyContent: "center" }}>
+        <div className="generating-pill">
+          <span className="pulse-dot" />
+          Loading…
+        </div>
+      </div>
+    );
+  }
+
+  if (user === null) {
+    return <Login />;
+  }
 
   const archPlaceholder =
     "Describe your architecture...\n\nExamples:\n• We get a request from the customer\n• The API server queries the database\n• Auth service validates the token before routing";
@@ -196,6 +227,17 @@ export default function App() {
               Generating…
             </div>
           )}
+          <div className="user-menu">
+            {user.picture ? (
+              <img src={user.picture} alt={user.name} className="user-avatar" referrerPolicy="no-referrer" />
+            ) : (
+              <div className="user-avatar user-avatar-fallback">
+                {user.name.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <span className="user-name">{user.name}</span>
+            <a href={`${API_BASE}/auth/logout`} className="logout-btn">Sign out</a>
+          </div>
         </div>
       </header>
 
