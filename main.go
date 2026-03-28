@@ -10,6 +10,8 @@ import (
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/joho/godotenv"
 )
 
 type DiagramRequest struct {
@@ -161,6 +163,10 @@ func handleDiagram(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found, using environment variables")
+	}
+
 	groqAPIKey = os.Getenv("GROQ_API_KEY")
 	if groqAPIKey == "" {
 		log.Fatal("GROQ_API_KEY environment variable not set")
@@ -196,11 +202,22 @@ func main() {
 		log.Fatalf("Qdrant init failed: %v", err)
 	}
 
+	initAuth()
+
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/diagram", handleDiagram)
-	mux.HandleFunc("/api/rag/upload", handleRAGUpload)
-	mux.HandleFunc("/api/rag/docs", handleRAGListDocs)
-	mux.HandleFunc("/api/rag/query", handleRAGQuery)
+
+	// Auth routes (unauthenticated)
+	mux.HandleFunc("/auth/google", handleGoogleLogin)
+	mux.HandleFunc("/auth/google/callback", handleGoogleCallback)
+	mux.HandleFunc("/auth/logout", handleLogout)
+	mux.HandleFunc("/auth/me", handleMe)
+
+	// Protected API routes
+	mux.Handle("/api/diagram", authMiddleware(http.HandlerFunc(handleDiagram)))
+	mux.Handle("/api/rag/upload", authMiddleware(http.HandlerFunc(handleRAGUpload)))
+	mux.Handle("/api/rag/docs", authMiddleware(http.HandlerFunc(handleRAGListDocs)))
+	mux.Handle("/api/rag/query", authMiddleware(http.HandlerFunc(handleRAGQuery)))
+
 	mux.Handle("/", http.FileServer(http.Dir("./frontend/dist")))
 
 	handler := corsMiddleware(mux)
@@ -212,9 +229,20 @@ func main() {
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%s %s", r.Method, r.URL.Path)
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+		origin := r.Header.Get("Origin")
+		if origin != "" {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+			w.Header().Set("Vary", "Origin")
+		} else {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+		}
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
 		next.ServeHTTP(w, r)
 	})
 }

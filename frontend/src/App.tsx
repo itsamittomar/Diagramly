@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import mermaid from "mermaid";
 import SchemaPanel from "./SchemaPanel";
 import RagPanel from "./RagPanel";
+import Login from "./Login";
 import "./App.css";
 
 mermaid.initialize({ startOnLoad: false, theme: "neutral" });
@@ -9,6 +10,12 @@ mermaid.initialize({ startOnLoad: false, theme: "neutral" });
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
 type Mode = "arch" | "schema" | "rag";
+
+interface User {
+  email: string;
+  name: string;
+  picture: string;
+}
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -20,7 +27,9 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 export default function App() {
+  const [user, setUser] = useState<User | null | undefined>(undefined);
   const [mode, setMode] = useState<Mode>("arch");
+  const [lockedToast, setLockedToast] = useState(false);
   const [text, setText] = useState("");
   const [mermaidCode, setMermaidCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -28,6 +37,13 @@ export default function App() {
   const [zoom, setZoom] = useState(1);
   const diagramRef = useRef<HTMLDivElement>(null);
   const debouncedText = useDebounce(text, 800);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/auth/me`, { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => setUser(data))
+      .catch(() => setUser(null));
+  }, []);
 
   const changeZoom = (delta: number) =>
     setZoom((z) => Math.min(3, Math.max(0.25, +(z + delta).toFixed(2))));
@@ -103,6 +119,7 @@ export default function App() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: input }),
+        credentials: "include",
       });
       const data = await res.json();
       if (data.error) setError(data.error);
@@ -136,6 +153,21 @@ export default function App() {
         setError("Mermaid render failed. Check console for raw syntax.");
       });
   }, [mermaidCode]);
+
+  if (user === undefined) {
+    return (
+      <div className="app" style={{ alignItems: "center", justifyContent: "center" }}>
+        <div className="generating-pill">
+          <span className="pulse-dot" />
+          Loading…
+        </div>
+      </div>
+    );
+  }
+
+  if (user === null) {
+    return <Login />;
+  }
 
   const archPlaceholder =
     "Describe your architecture...\n\nExamples:\n• We get a request from the customer\n• The API server queries the database\n• Auth service validates the token before routing";
@@ -176,8 +208,8 @@ export default function App() {
             Schema Design
           </button>
           <button
-            className={`mode-btn ${mode === "rag" ? "active" : ""}`}
-            onClick={() => switchMode("rag")}
+            className="mode-btn mode-btn-locked"
+            onClick={() => setLockedToast(true)}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
@@ -186,6 +218,7 @@ export default function App() {
               <line x1="16" y1="17" x2="8" y2="17"/>
             </svg>
             Documents
+            <span className="coming-soon-badge">Soon</span>
           </button>
         </div>
 
@@ -196,8 +229,42 @@ export default function App() {
               Generating…
             </div>
           )}
+          <div className="user-menu">
+            {user.picture ? (
+              <img src={user.picture} alt={user.name} className="user-avatar" referrerPolicy="no-referrer" />
+            ) : (
+              <div className="user-avatar user-avatar-fallback">
+                {user.name.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <span className="user-name">{user.name}</span>
+            <a href={`${API_BASE}/auth/logout`} className="logout-btn">Sign out</a>
+          </div>
         </div>
       </header>
+
+      {lockedToast && (
+        <div className="modal-overlay" onClick={() => setLockedToast(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+              </svg>
+            </div>
+            <h2 className="modal-title">Documents — Coming Soon</h2>
+            <p className="modal-body">
+              We're building a powerful document Q&amp;A experience with RAG.<br/>
+              Upload PDFs, Markdown, and CSVs and ask questions across your files.
+            </p>
+            <button className="modal-close-btn" onClick={() => setLockedToast(false)}>
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
 
       {mode === "rag" && <RagPanel />}
 
