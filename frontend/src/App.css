@@ -1080,3 +1080,252 @@ body {
   color: #a5b4fc;
   background: rgba(99,102,241,0.08);
 }
+
+/* ── Draw Panel ──────────────────────────────────────── */
+.draw-panel {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  height: calc(100vh - 52px);
+}
+
+.draw-sidebar {
+  width: 148px;
+  background: #0d0f1a;
+  border-right: 1px solid rgba(255,255,255,0.06);
+  padding: 12px 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  flex-shrink: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #1e2130 transparent;
+}
+
+.draw-sidebar::-webkit-scrollbar { width: 4px; }
+.draw-sidebar::-webkit-scrollbar-track { background: transparent; }
+.draw-sidebar::-webkit-scrollbar-thumb { background: #1e2130; border-radius: 2px; }
+
+.draw-sidebar-section {
+  margin-bottom: 12px;
+}
+
+.draw-sidebar-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 8px;
+  padding: 0 2px;
+}
+
+.draw-sidebar-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+
+.draw-shape-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 4px;
+  border-radius: 7px;
+  cursor: grab;
+  border: 1px solid transparent;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.draw-shape-item:hover {
+  background: #1e2130;
+  border-color: rgba(255,255,255,0.08);
+}
+
+.draw-shape-item:active {
+  cursor: grabbing;
+}
+
+.draw-shape-item span {
+  font-size: 10px;
+  color: #64748b;
+}
+
+.draw-service-item {
+  border-color: rgba(255,255,255,0.04);
+}
+
+.draw-service-item:hover {
+  background: #13151f;
+}
+
+.draw-sidebar-hint {
+  font-size: 10px;
+  color: #2d3748;
+  text-align: center;
+  margin-top: auto;
+  padding: 8px 4px 0;
+  line-height: 1.5;
+}
+
+.draw-canvas-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.draw-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  background: #0d0f1a;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+
+.draw-toolbar-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  background: #1a1d2e;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px;
+  color: #94a3b8;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.draw-toolbar-btn:hover {
+  background: #252840;
+  color: #e2e8f0;
+  border-color: rgba(255,255,255,0.15);
+}
+
+.draw-toolbar-btn.active {
+  background: rgba(99,102,241,0.15);
+  color: #a5b4fc;
+  border-color: rgba(99,102,241,0.4);
+}
+
+.draw-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.draw-toolbar-label {
+  font-size: 10px;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-right: 2px;
+  white-space: nowrap;
+}
+
+.draw-toolbar-divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(255,255,255,0.08);
+  margin: 0 4px;
+}
+
+.draw-toolbar-hint {
+  font-size: 11px;
+  color: #334155;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* Custom node base */
+.draw-node {
+  padding: 10px 16px;
+  font-size: 12px;
+  color: #e2e8f0;
+  text-align: center;
+  min-width: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.draw-node-process {
+  background: #1a1d2e;
+  border: 2px solid #6366f1;
+  border-radius: 6px;
+}
+
+.draw-node-process.selected {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 2px rgba(139,92,246,0.25);
+}
+
+.draw-node-terminal {
+  background: #1a1d2e;
+  border: 2px solid #10b981;
+  border-radius: 50px;
+}
+
+.draw-node-terminal.selected {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 2px rgba(139,92,246,0.25);
+}
+
+.draw-node-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #6366f1;
+  color: #e2e8f0;
+  font-size: 12px;
+  text-align: center;
+  outline: none;
+  width: 100%;
+  padding: 2px 4px;
+}
+
+/* React Flow overrides for dark theme */
+.react-flow__controls {
+  background: #1a1d2e;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.react-flow__controls-button {
+  background: #1a1d2e;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  fill: #64748b;
+}
+
+.react-flow__controls-button:hover {
+  background: #252840;
+  fill: #e2e8f0;
+}
+
+.react-flow__controls-button svg {
+  fill: inherit;
+}
+
+.react-flow__handle {
+  width: 8px;
+  height: 8px;
+  background: #6366f1;
+  border: 2px solid #0f1117;
+}
+
+.react-flow__edge-path {
+  stroke: #6366f1;
+}
+
+.react-flow__connection-line {
+  stroke: #8b5cf6;
+}
+
+.react-flow__attribution {
+  display: none;
+}
