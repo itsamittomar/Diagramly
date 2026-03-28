@@ -1329,3 +1329,184 @@ body {
 .react-flow__attribution {
   display: none;
 }
+
+/* ── Mobile panel tabs (hidden on desktop) ───────── */
+.mobile-panel-tabs {
+  display: none;
+}
+
+/* ── Responsive ──────────────────────────────────── */
+@media (max-width: 768px) {
+
+  /* Allow body to scroll on mobile */
+  body { overflow: auto; }
+
+  /* ── Header ── */
+  .header {
+    padding: 0 12px;
+    gap: 8px;
+    height: 52px;
+    flex-wrap: nowrap;
+  }
+
+  .brand-name { display: none; }
+
+  .mode-toggle {
+    flex: 1;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    margin: 0;
+    padding: 3px;
+  }
+
+  .mode-toggle::-webkit-scrollbar { display: none; }
+
+  .mode-btn {
+    padding: 5px 10px;
+    font-size: 12px;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  /* Hide text labels on very small screens, show only icons */
+  @media (max-width: 480px) {
+    .mode-btn-label { display: none; }
+    .mode-btn { padding: 6px 10px; }
+  }
+
+  .user-name { display: none; }
+
+  .generating-pill span:not(.pulse-dot) { display: none; }
+  .generating-pill { padding: 5px 8px; }
+
+  /* ── Mobile panel tab switcher ── */
+  .mobile-panel-tabs {
+    display: flex;
+    background: #0d0f1a;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    flex-shrink: 0;
+  }
+
+  .mobile-tab {
+    flex: 1;
+    padding: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.4);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .mobile-tab.active {
+    color: #a5b4fc;
+    border-bottom-color: #6366f1;
+    background: rgba(99,102,241,0.05);
+  }
+
+  /* ── Panels — stack vertically ── */
+  .panels {
+    flex-direction: column;
+    overflow: auto;
+  }
+
+  .panel { min-width: 0; flex: none; }
+
+  /* Hide inactive panel via mobile-hidden class (set by React) */
+  .mobile-hidden { display: none !important; }
+
+  /* Editor fills viewport height minus header + tabs */
+  .editor-panel {
+    max-width: 100%;
+    height: calc(100vh - 52px - 41px);
+  }
+
+  .editor { font-size: 15px; padding: 16px; }
+
+  /* Diagram panel takes remaining space */
+  .diagram-panel { height: calc(100vh - 52px - 41px); }
+
+  .divider { display: none; }
+
+  .diagram-area { padding: 16px; }
+
+  /* Zoom/export controls wrap */
+  .diagram-panel-actions { flex-wrap: wrap; gap: 4px; }
+
+  .panel-label {
+    height: 36px;
+    padding: 0 12px;
+    font-size: 10px;
+  }
+
+  /* ── Draw panel — sidebar becomes horizontal strip ── */
+  .draw-panel { flex-direction: column; }
+
+  .draw-sidebar {
+    width: 100%;
+    height: auto;
+    max-height: 130px;
+    flex-direction: column;
+    padding: 8px 10px;
+    border-right: none;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    overflow-y: hidden;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .draw-sidebar::-webkit-scrollbar { display: none; }
+
+  .draw-sidebar-section {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .draw-sidebar-grid {
+    display: flex;
+    flex-direction: row;
+    gap: 5px;
+    flex-wrap: nowrap;
+  }
+
+  .draw-shape-item {
+    flex-shrink: 0;
+    padding: 5px 6px;
+    min-width: 58px;
+  }
+
+  .draw-sidebar-hint { display: none; }
+
+  .draw-canvas-wrapper { flex: 1; min-height: 0; }
+
+  /* Draw toolbar wraps on mobile */
+  .draw-toolbar {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 6px 10px;
+  }
+
+  .draw-toolbar-hint { display: none; }
+
+  .draw-toolbar-group { flex-wrap: wrap; }
+
+  /* ── Schema panel ── */
+  .schema-panel { padding: 12px; }
+
+  /* ── Modal ── */
+  .modal-card { padding: 28px 20px; }
+
+  /* ── User menu ── */
+  .logout-btn { font-size: 11px; padding: 4px 8px; }
+}
+
+@media (max-width: 480px) {
+  .export-controls { display: none; }
+  .zoom-reset { display: none; }
+}
