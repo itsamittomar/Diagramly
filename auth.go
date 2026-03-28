@@ -42,6 +42,7 @@ func initAuth() {
 	if appURL == "" {
 		appURL = "http://localhost:8080"
 	}
+	appURL = strings.TrimRight(appURL, "/")
 
 	clientID := os.Getenv("GOOGLE_CLIENT_ID")
 	clientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
@@ -94,6 +95,10 @@ func isEmailAllowed(email string) bool {
 	return true // no restriction set
 }
 
+func isHTTPS() bool {
+	return strings.HasPrefix(appURL, "https://")
+}
+
 func generateState() (string, error) {
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {
@@ -114,6 +119,7 @@ func handleGoogleLogin(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		MaxAge:   300,
 		HttpOnly: true,
+		Secure:   isHTTPS(),
 		SameSite: http.SameSiteLaxMode,
 	})
 	http.Redirect(w, r, oauthConfig.AuthCodeURL(state), http.StatusTemporaryRedirect)
@@ -180,6 +186,7 @@ func handleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		MaxAge:   86400,
 		HttpOnly: true,
+		Secure:   isHTTPS(),
 		SameSite: http.SameSiteLaxMode,
 	})
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
