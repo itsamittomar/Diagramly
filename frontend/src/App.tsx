@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import mermaid from "mermaid";
 import SchemaPanel from "./SchemaPanel";
 import RagPanel from "./RagPanel";
+import DrawPanel from "./DrawPanel";
 import Login from "./Login";
 import "./App.css";
 
@@ -9,7 +10,7 @@ mermaid.initialize({ startOnLoad: false, theme: "neutral" });
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
-type Mode = "arch" | "schema" | "rag";
+type Mode = "arch" | "schema" | "draw" | "rag";
 
 interface User {
   email: string;
@@ -208,6 +209,16 @@ export default function App() {
             Schema Design
           </button>
           <button
+            className={`mode-btn ${mode === "draw" ? "active" : ""}`}
+            onClick={() => switchMode("draw")}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/><line x1="17.5" y1="14" x2="17.5" y2="21"/><line x1="14" y1="17.5" x2="21" y2="17.5"/>
+            </svg>
+            Draw
+          </button>
+          <button
             className="mode-btn mode-btn-locked"
             onClick={() => setLockedToast(true)}
           >
@@ -267,8 +278,9 @@ export default function App() {
       )}
 
       {mode === "rag" && <RagPanel />}
+      {mode === "draw" && <DrawPanel />}
 
-      <div className="panels" style={{ display: mode === "rag" ? "none" : "flex" }}>
+      <div className="panels" style={{ display: mode === "rag" || mode === "draw" ? "none" : "flex" }}>
         <div className="panel editor-panel">
           <div className="panel-label">
             <span>{mode === "arch" ? "Description" : "Tables"}</span>
