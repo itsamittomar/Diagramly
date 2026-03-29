@@ -181,6 +181,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [zoom, setZoom] = useState(1);
+  const [diagNatural, setDiagNatural] = useState({ w: 0, h: 0 });
   const diagramRef = useRef<HTMLDivElement>(null);
   const debouncedText = useDebounce(text, 800);
 
@@ -416,6 +417,14 @@ export default function App() {
         if (!diagramRef.current) return;
         diagramRef.current.innerHTML = svg;
         styleAndAnimateDiagram(diagramRef.current);
+        const svgEl = diagramRef.current.querySelector("svg");
+        if (svgEl) {
+          const vb = svgEl.viewBox.baseVal;
+          setDiagNatural({
+            w: vb.width  || svgEl.clientWidth  || 800,
+            h: vb.height || svgEl.clientHeight || 600,
+          });
+        }
       })
       .catch((e) => {
         console.error("Mermaid render error:", e);
@@ -628,11 +637,26 @@ export default function App() {
                 {error}
               </div>
             )}
-            <div
-              ref={diagramRef}
-              className="diagram"
-              style={{ transform: `scale(${zoom})`, transformOrigin: "top center" }}
-            />
+            {/* Wrapper sized to scaled dimensions so overflow: auto scrolls correctly */}
+            <div style={{
+              width:    diagNatural.w ? diagNatural.w * zoom : "100%",
+              height:   diagNatural.h ? diagNatural.h * zoom : "100%",
+              minWidth: diagNatural.w ? diagNatural.w * zoom : "100%",
+              flexShrink: 0,
+              position: "relative",
+            }}>
+              <div
+                ref={diagramRef}
+                className="diagram"
+                style={{
+                  transform: `scale(${zoom})`,
+                  transformOrigin: "top left",
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                }}
+              />
+            </div>
 
             {mermaidCode && (
               <div className="download-corner">
