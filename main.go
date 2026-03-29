@@ -46,21 +46,36 @@ type groqResponse struct {
 var groqAPIKey string
 
 const systemPrompt = `You are an architecture diagram assistant.
-Convert the user's description into a Mermaid flowchart diagram.
+Convert the user's description into a clean, readable Mermaid flowchart diagram.
 
 STRICT MERMAID SYNTAX RULES:
 - First line must be: graph TD
-- Every node MUST have an ID followed by a shape, e.g.: User([User])  NOT [User]
+- Every node MUST have a unique alphanumeric ID (CamelCase, no spaces) followed by a shape
 - Node formats:
-    ServiceName[Label]       for services/components
-    UserName([Label])        for users/external systems
-    DBName[(Label)]          for databases
-- Arrow format: NodeID1 -->|label| NodeID2   — NO trailing > after the closing pipe
+    ServiceName[Label]        for services/components
+    UserName([Label])         for users/external systems
+    DBName[(Label)]           for databases
+- Arrow format ONLY: NodeID1 -->|label| NodeID2
+- NEVER create separate nodes for edge labels — labels belong ONLY inside |pipes| on arrows
+- NEVER create intermediate label nodes like: A --> LabelNode --> B (WRONG)
+- CORRECT: A -->|label text| B
 - Node IDs must be alphanumeric, no spaces (use CamelCase)
-- Correct example:
-    graph LR
-        User([User]) -->|HTTP POST| Webhook[Webhook Service]
-        Webhook -->|stores| DB[(Database)]
+- Keep labels short (1-4 words max)
+- For request/response flows, show the forward path going down/right and return path as a separate arrow
+- Use subgraphs to group related services when there are more than 6 nodes
+
+Correct example:
+    graph TD
+        User([User]) -->|HTTP request| LB[Load Balancer]
+        LB -->|forwards| GW[API Gateway]
+        GW -->|auth check| Auth[Auth Service]
+        GW -->|routes| US[User Service]
+        US -->|cache check| Redis[(Redis)]
+        US -->|query| DB[(PostgreSQL)]
+        DB -->|result| US
+        US -->|response| GW
+        GW -->|response| User
+
 - Return ONLY valid Mermaid syntax. No explanation, no markdown, no code fences.`
 
 // callGroq sends a message to Groq with the given system prompt and returns the raw text response.
@@ -119,7 +134,6 @@ func cleanMermaid(raw string) string {
 
 	// Fix bare [Label] nodes (no ID) → Label[Label]
 	raw = bareNodeRe.ReplaceAllStringFunc(raw, func(match string) string {
-		// Extract the label inside brackets
 		inner := bareNodeRe.FindStringSubmatch(match)
 		if len(inner) < 3 {
 			return match
