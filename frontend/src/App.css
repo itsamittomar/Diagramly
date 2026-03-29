@@ -309,6 +309,7 @@ body {
   display: flex;
   align-items: flex-start;
   justify-content: center;
+  position: relative;
   background:
     radial-gradient(ellipse at 20% 20%, rgba(99,102,241,0.04) 0%, transparent 60%),
     radial-gradient(ellipse at 80% 80%, rgba(139,92,246,0.04) 0%, transparent 60%),
@@ -411,6 +412,102 @@ body {
   color: rgba(255,255,255,0.3);
   min-width: 36px;
   text-align: center;
+}
+
+/* Download corner overlay */
+.download-corner {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  z-index: 10;
+}
+
+.download-menu-up {
+  bottom: calc(100% + 6px) !important;
+  top: auto !important;
+}
+
+/* Download dropdown */
+.download-dropdown {
+  position: relative;
+}
+
+.download-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  height: 28px;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  box-shadow: 0 2px 8px rgba(99,102,241,0.35);
+}
+
+.download-btn:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.download-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
+
+.download-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+  background: #1e293b;
+  border: 1px solid rgba(99,102,241,0.25);
+  border-radius: 10px;
+  padding: 5px;
+  min-width: 180px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.download-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  color: rgba(255,255,255,0.8);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+}
+
+.download-menu button:hover {
+  background: rgba(99,102,241,0.15);
+  color: #fff;
+}
+
+.download-menu-badge {
+  margin-left: auto;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #a5b4fc;
+  background: rgba(99,102,241,0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
 }
 
 /* Mermaid source */
